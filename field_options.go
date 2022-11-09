@@ -138,6 +138,15 @@ var (
 			return m
 		}
 	}
+	// FieldWithNS specify JSON tag with name strategy
+	FieldWithNS = func(fieldFunc func(param *model2.Field) (ret *model2.Field)) model2.ModifyFieldOpt {
+		return func(m *model2.Field) *model2.Field {
+			if fieldFunc != nil {
+				m = fieldFunc(m)
+			}
+			return m
+		}
+	}
 	// FieldGORMTag specify GORM tag
 	FieldGORMTag = func(columnName string, gormTag string) model2.ModifyFieldOpt {
 		return func(m *model2.Field) *model2.Field {
