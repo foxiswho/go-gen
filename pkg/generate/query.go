@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+	"gorm.io/gen/pkg/model"
 	"reflect"
 	"strings"
 
@@ -10,8 +11,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"gorm.io/gen/field"
-	"gorm.io/gen/internal/model"
-	"gorm.io/gen/internal/parser"
+	"gorm.io/gen/pkg/parser"
 )
 
 type FieldParser interface {

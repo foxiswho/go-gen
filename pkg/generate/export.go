@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+	model2 "gorm.io/gen/pkg/model"
 	"reflect"
 	"strings"
 
@@ -12,12 +13,11 @@ import (
 
 	"gorm.io/gen/field"
 	"gorm.io/gen/helper"
-	"gorm.io/gen/internal/model"
-	"gorm.io/gen/internal/parser"
+	"gorm.io/gen/pkg/parser"
 )
 
 // GetQueryStructMeta generate db model by table name
-func GetQueryStructMeta(db *gorm.DB, conf *model.Config) (*QueryStructMeta, error) {
+func GetQueryStructMeta(db *gorm.DB, conf *model2.Config) (*QueryStructMeta, error) {
 	if _, ok := db.Config.Dialector.(tests.DummyDialector); ok {
 		return nil, fmt.Errorf("UseDB() is necessary to generate model struct [%s] from database table [%s]", conf.ModelName, conf.TableName)
 	}
@@ -38,7 +38,7 @@ func GetQueryStructMeta(db *gorm.DB, conf *model.Config) (*QueryStructMeta, erro
 
 	return (&QueryStructMeta{
 		db:              db,
-		Source:          model.Table,
+		Source:          model2.Table,
 		Generated:       true,
 		FileName:        fileName,
 		TableName:       tableName,
@@ -52,7 +52,7 @@ func GetQueryStructMeta(db *gorm.DB, conf *model.Config) (*QueryStructMeta, erro
 }
 
 // GetQueryStructMetaFromObject generate base struct from object
-func GetQueryStructMetaFromObject(obj helper.Object, conf *model.Config) (*QueryStructMeta, error) {
+func GetQueryStructMetaFromObject(obj helper.Object, conf *model2.Config) (*QueryStructMeta, error) {
 	err := helper.CheckObject(obj)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ func GetQueryStructMetaFromObject(obj helper.Object, conf *model.Config) (*Query
 		fileName = schema.NamingStrategy{SingularTable: true}.TableName(fileName)
 	}
 
-	fields := make([]*model.Field, 0, 16)
+	fields := make([]*model2.Field, 0, 16)
 	for _, field := range obj.Fields() {
-		fields = append(fields, &model.Field{
+		fields = append(fields, &model2.Field{
 			Name:             field.Name(),
 			Type:             field.Type(),
 			ColumnName:       field.ColumnName(),
@@ -98,7 +98,7 @@ func GetQueryStructMetaFromObject(obj helper.Object, conf *model.Config) (*Query
 	}
 
 	return &QueryStructMeta{
-		Source:          model.Object,
+		Source:          model2.Object,
 		Generated:       true,
 		FileName:        fileName,
 		TableName:       tableName,
@@ -137,7 +137,7 @@ func ConvertStructs(db *gorm.DB, structs ...interface{}) (metas []*QueryStructMe
 			ModelStructName: name,
 			QueryStructName: uncaptialize(newStructName),
 			StructInfo:      parser.Param{PkgPath: structType.PkgPath(), Type: name, Package: getPackageName(structType.String())},
-			Source:          model.Struct,
+			Source:          model2.Struct,
 			db:              db,
 		}
 		if err := meta.parseStruct(st); err != nil {

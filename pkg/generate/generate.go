@@ -2,13 +2,12 @@ package generate
 
 import (
 	"fmt"
+	model2 "gorm.io/gen/pkg/model"
 	"regexp"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-
-	"gorm.io/gen/internal/model"
 )
 
 /*
@@ -16,7 +15,7 @@ import (
 ** Provided by @qqxhb
  */
 
-func getFields(db *gorm.DB, conf *model.Config, columns []*model.Column) (fields []*model.Field) {
+func getFields(db *gorm.DB, conf *model2.Config, columns []*model2.Column) (fields []*model2.Field) {
 	for _, col := range columns {
 		col.SetDataTypeMap(conf.DataTypeMap)
 		col.WithNS(conf.FieldJSONTagNS, conf.FieldNewTagNS)
@@ -58,7 +57,7 @@ func getFields(db *gorm.DB, conf *model.Config, columns []*model.Column) (fields
 	return fields
 }
 
-func filterField(m *model.Field, opts []model.FieldOption) *model.Field {
+func filterField(m *model2.Field, opts []model2.FieldOption) *model2.Field {
 	for _, opt := range opts {
 		if opt.Operator()(m) == nil {
 			return nil
@@ -67,7 +66,7 @@ func filterField(m *model.Field, opts []model.FieldOption) *model.Field {
 	return m
 }
 
-func modifyField(m *model.Field, opts []model.FieldOption) *model.Field {
+func modifyField(m *model2.Field, opts []model2.FieldOption) *model2.Field {
 	for _, opt := range opts {
 		m = opt.Operator()(m)
 	}

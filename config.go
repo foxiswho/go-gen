@@ -2,13 +2,12 @@ package gen
 
 import (
 	"fmt"
+	model2 "gorm.io/gen/pkg/model"
 	"path/filepath"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/utils/tests"
-
-	"gorm.io/gen/internal/model"
 )
 
 // GenerateMode generate mode
@@ -45,7 +44,7 @@ type Config struct {
 
 	queryPkgName   string // generated query code's package name
 	modelPkgPath   string // model pkg path in target project
-	dbNameOpts     []model.SchemaNameOpt
+	dbNameOpts     []model2.SchemaNameOpt
 	importPkgPaths []string
 
 	// name strategy for syncing table from db
@@ -70,7 +69,7 @@ func (cfg *Config) WithOpts(opts ...ModelOpt) {
 }
 
 // WithDbNameOpts set get database name function
-func (cfg *Config) WithDbNameOpts(opts ...model.SchemaNameOpt) {
+func (cfg *Config) WithDbNameOpts(opts ...model2.SchemaNameOpt) {
 	if cfg.dbNameOpts == nil {
 		cfg.dbNameOpts = opts
 	} else {
@@ -123,7 +122,7 @@ func (cfg *Config) WithImportPkgPath(paths ...string) {
 // Revise format path and db
 func (cfg *Config) Revise() (err error) {
 	if strings.TrimSpace(cfg.ModelPkgPath) == "" {
-		cfg.ModelPkgPath = model.DefaultModelPkg
+		cfg.ModelPkgPath = model2.DefaultModelPkg
 	}
 
 	cfg.OutPath, err = filepath.Abs(cfg.OutPath)

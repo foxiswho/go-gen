@@ -2,10 +2,9 @@ package generate
 
 import (
 	"fmt"
+	"gorm.io/gen/pkg/model"
 	"strconv"
 	"strings"
-
-	"gorm.io/gen/internal/model"
 )
 
 // NewSection create and initialize Sections

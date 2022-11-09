@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	generate2 "gorm.io/gen/pkg/generate"
+	model2 "gorm.io/gen/pkg/model"
+	template2 "gorm.io/gen/pkg/template"
+	"gorm.io/gen/pkg/utils/pools"
 	"io"
 	"io/ioutil"
 	"log"
@@ -20,11 +24,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"gorm.io/gen/helper"
-	"gorm.io/gen/internal/generate"
-	"gorm.io/gen/internal/model"
-	"gorm.io/gen/internal/parser"
-	tmpl "gorm.io/gen/internal/template"
-	"gorm.io/gen/internal/utils/pools"
+	"gorm.io/gen/pkg/parser"
 )
 
 // T generic type
@@ -49,17 +49,17 @@ func NewGenerator(cfg Config) *Generator {
 	return &Generator{
 		Config: cfg,
 		Data:   make(map[string]*genInfo),
-		models: make(map[string]*generate.QueryStructMeta),
+		models: make(map[string]*generate2.QueryStructMeta),
 	}
 }
 
 // genInfo info about generated code
 type genInfo struct {
-	*generate.QueryStructMeta
-	Interfaces []*generate.InterfaceMethod
+	*generate2.QueryStructMeta
+	Interfaces []*generate2.InterfaceMethod
 }
 
-func (i *genInfo) appendMethods(methods []*generate.InterfaceMethod) {
+func (i *genInfo) appendMethods(methods []*generate2.InterfaceMethod) {
 	for _, newMethod := range methods {
 		if i.methodInGenInfo(newMethod) {
 			continue
@@ -68,7 +68,7 @@ func (i *genInfo) appendMethods(methods []*generate.InterfaceMethod) {
 	}
 }
 
-func (i *genInfo) methodInGenInfo(m *generate.InterfaceMethod) bool {
+func (i *genInfo) methodInGenInfo(m *generate2.InterfaceMethod) bool {
 	for _, method := range i.Interfaces {
 		if method.IsRepeatFromSameInterface(m) {
 			return true
@@ -81,8 +81,8 @@ func (i *genInfo) methodInGenInfo(m *generate.InterfaceMethod) bool {
 type Generator struct {
 	Config
 
-	Data   map[string]*genInfo                  //gen query data
-	models map[string]*generate.QueryStructMeta //gen model data
+	Data   map[string]*genInfo                   //gen query data
+	models map[string]*generate2.QueryStructMeta //gen model data
 }
 
 // UseDB set db connection
@@ -98,13 +98,13 @@ func (g *Generator) UseDB(db *gorm.DB) {
  */
 
 // GenerateModel catch table info from db, return a BaseStruct
-func (g *Generator) GenerateModel(tableName string, opts ...ModelOpt) *generate.QueryStructMeta {
+func (g *Generator) GenerateModel(tableName string, opts ...ModelOpt) *generate2.QueryStructMeta {
 	return g.GenerateModelAs(tableName, g.db.Config.NamingStrategy.SchemaName(tableName), opts...)
 }
 
 // GenerateModelAs catch table info from db, return a BaseStruct
-func (g *Generator) GenerateModelAs(tableName string, modelName string, opts ...ModelOpt) *generate.QueryStructMeta {
-	meta, err := generate.GetQueryStructMeta(g.db, g.genModelConfig(tableName, modelName, opts))
+func (g *Generator) GenerateModelAs(tableName string, modelName string, opts ...ModelOpt) *generate2.QueryStructMeta {
+	meta, err := generate2.GetQueryStructMeta(g.db, g.genModelConfig(tableName, modelName, opts))
 	if err != nil {
 		g.db.Logger.Error(context.Background(), "generate struct from table fail: %s", err)
 		panic("generate struct fail")
@@ -136,8 +136,8 @@ func (g *Generator) GenerateAllTable(opts ...ModelOpt) (tableModels []interface{
 }
 
 // GenerateModelFrom generate model from object
-func (g *Generator) GenerateModelFrom(obj helper.Object) *generate.QueryStructMeta {
-	s, err := generate.GetQueryStructMetaFromObject(obj, g.genModelObjConfig())
+func (g *Generator) GenerateModelFrom(obj helper.Object) *generate2.QueryStructMeta {
+	s, err := generate2.GetQueryStructMetaFromObject(obj, g.genModelObjConfig())
 	if err != nil {
 		panic(fmt.Errorf("generate struct from object fail: %w", err))
 	}
@@ -147,26 +147,26 @@ func (g *Generator) GenerateModelFrom(obj helper.Object) *generate.QueryStructMe
 	return s
 }
 
-func (g *Generator) genModelConfig(tableName string, modelName string, modelOpts []ModelOpt) *model.Config {
+func (g *Generator) genModelConfig(tableName string, modelName string, modelOpts []ModelOpt) *model2.Config {
 	if modelOpts == nil {
 		modelOpts = g.modelOpts
 	} else {
 		modelOpts = append(modelOpts, g.modelOpts...)
 	}
-	return &model.Config{
+	return &model2.Config{
 		ModelPkg:       g.Config.ModelPkgPath,
 		TablePrefix:    g.getTablePrefix(),
 		TableName:      tableName,
 		ModelName:      modelName,
 		ImportPkgPaths: g.importPkgPaths,
 		ModelOpts:      modelOpts,
-		NameStrategy: model.NameStrategy{
+		NameStrategy: model2.NameStrategy{
 			SchemaNameOpts: g.dbNameOpts,
 			TableNameNS:    g.tableNameNS,
 			ModelNameNS:    g.modelNameNS,
 			FileNameNS:     g.fileNameNS,
 		},
-		FieldConfig: model.FieldConfig{
+		FieldConfig: model2.FieldConfig{
 			DataTypeMap: g.dataTypeMap,
 
 			FieldSignable:     g.FieldSignable,
@@ -188,11 +188,11 @@ func (g *Generator) getTablePrefix() string {
 	return ""
 }
 
-func (g *Generator) genModelObjConfig() *model.Config {
-	return &model.Config{
+func (g *Generator) genModelObjConfig() *model2.Config {
+	return &model2.Config{
 		ModelPkg:       g.Config.ModelPkgPath,
 		ImportPkgPaths: g.importPkgPaths,
-		NameStrategy: model.NameStrategy{
+		NameStrategy: model2.NameStrategy{
 			TableNameNS: g.tableNameNS,
 			ModelNameNS: g.modelNameNS,
 			FileNameNS:  g.fileNameNS,
@@ -208,7 +208,7 @@ func (g *Generator) ApplyBasic(models ...interface{}) {
 // ApplyInterface specifies method interfaces on structures, implment codes will be generated after calling g.Execute()
 // eg: g.ApplyInterface(func(model.Method){}, model.User{}, model.Company{})
 func (g *Generator) ApplyInterface(fc interface{}, models ...interface{}) {
-	structs, err := generate.ConvertStructs(g.db, models...)
+	structs, err := generate2.ConvertStructs(g.db, models...)
 	if err != nil {
 		g.db.Logger.Error(context.Background(), "check struct fail: %v", err)
 		panic("check struct fail")
@@ -216,7 +216,7 @@ func (g *Generator) ApplyInterface(fc interface{}, models ...interface{}) {
 	g.apply(fc, structs)
 }
 
-func (g *Generator) apply(fc interface{}, structs []*generate.QueryStructMeta) {
+func (g *Generator) apply(fc interface{}, structs []*generate2.QueryStructMeta) {
 	interfacePaths, err := parser.GetInterfacePath(fc)
 	if err != nil {
 		g.db.Logger.Error(context.Background(), "get interface name or file fail: %s", err)
@@ -224,7 +224,7 @@ func (g *Generator) apply(fc interface{}, structs []*generate.QueryStructMeta) {
 	}
 
 	readInterface := new(parser.InterfaceSet)
-	err = readInterface.ParseFile(interfacePaths, generate.GetStructNames(structs))
+	err = readInterface.ParseFile(interfacePaths, generate2.GetStructNames(structs))
 	if err != nil {
 		g.db.Logger.Error(context.Background(), "parser interface file fail: %s", err)
 		panic("parser interface file fail")
@@ -232,9 +232,9 @@ func (g *Generator) apply(fc interface{}, structs []*generate.QueryStructMeta) {
 
 	for _, interfaceStructMeta := range structs {
 		if g.judgeMode(WithoutContext) {
-			interfaceStructMeta.ReviseFieldNameFor(model.GormKeywords)
+			interfaceStructMeta.ReviseFieldNameFor(model2.GormKeywords)
 		}
-		interfaceStructMeta.ReviseFieldNameFor(model.DOKeywords)
+		interfaceStructMeta.ReviseFieldNameFor(model2.DOKeywords)
 
 		genInfo, err := g.pushQueryStructMeta(interfaceStructMeta)
 		if err != nil {
@@ -242,7 +242,7 @@ func (g *Generator) apply(fc interface{}, structs []*generate.QueryStructMeta) {
 			panic("gen struct fail")
 		}
 
-		functions, err := generate.BuildDIYMethod(readInterface, interfaceStructMeta, genInfo.Interfaces)
+		functions, err := generate2.BuildDIYMethod(readInterface, interfaceStructMeta, genInfo.Interfaces)
 		if err != nil {
 			g.db.Logger.Error(context.Background(), "check interface fail: %v", err)
 			panic("check interface fail")
@@ -314,7 +314,7 @@ func (g *Generator) generateQueryFile() (err error) {
 
 	// generate query file
 	var buf bytes.Buffer
-	err = render(tmpl.Header, &buf, map[string]interface{}{
+	err = render(template2.Header, &buf, map[string]interface{}{
 		"Package":        g.queryPkgName,
 		"ImportPkgPaths": importList.Add(g.importPkgPaths...).Paths(),
 	})
@@ -323,12 +323,12 @@ func (g *Generator) generateQueryFile() (err error) {
 	}
 
 	if g.judgeMode(WithDefaultQuery) {
-		err = render(tmpl.DefaultQuery, &buf, g)
+		err = render(template2.DefaultQuery, &buf, g)
 		if err != nil {
 			return err
 		}
 	}
-	err = render(tmpl.QueryMethod, &buf, g)
+	err = render(template2.QueryMethod, &buf, g)
 	if err != nil {
 		return err
 	}
@@ -343,7 +343,7 @@ func (g *Generator) generateQueryFile() (err error) {
 	if g.WithUnitTest {
 		buf.Reset()
 
-		err = render(tmpl.Header, &buf, map[string]interface{}{
+		err = render(template2.Header, &buf, map[string]interface{}{
 			"Package":        g.queryPkgName,
 			"ImportPkgPaths": unitTestImportList.Add(g.importPkgPaths...).Paths(),
 		})
@@ -351,11 +351,11 @@ func (g *Generator) generateQueryFile() (err error) {
 			g.db.Logger.Error(context.Background(), "generate query unit test fail: %s", err)
 			return nil
 		}
-		err = render(tmpl.DIYMethodTestBasic, &buf, nil)
+		err = render(template2.DIYMethodTestBasic, &buf, nil)
 		if err != nil {
 			return err
 		}
-		err = render(tmpl.QueryMethodTest, &buf, g)
+		err = render(template2.QueryMethodTest, &buf, g)
 		if err != nil {
 			g.db.Logger.Error(context.Background(), "generate query unit test fail: %s", err)
 			return nil
@@ -380,7 +380,7 @@ func (g *Generator) generateSingleQueryFile(data *genInfo) (err error) {
 	if structPkgPath == "" {
 		structPkgPath = g.modelPkgPath
 	}
-	err = render(tmpl.Header, &buf, map[string]interface{}{
+	err = render(template2.Header, &buf, map[string]interface{}{
 		"Package":        g.queryPkgName,
 		"ImportPkgPaths": importList.Add(structPkgPath).Add(getImportPkgPaths(data)...).Paths(),
 	})
@@ -390,9 +390,9 @@ func (g *Generator) generateSingleQueryFile(data *genInfo) (err error) {
 
 	data.QueryStructMeta = data.QueryStructMeta.IfaceMode(g.judgeMode(WithQueryInterface))
 
-	structTmpl := tmpl.TableQueryStructWithContext
+	structTmpl := template2.TableQueryStructWithContext
 	if g.judgeMode(WithoutContext) {
-		structTmpl = tmpl.TableQueryStruct
+		structTmpl = template2.TableQueryStruct
 	}
 	err = render(structTmpl, &buf, data.QueryStructMeta)
 	if err != nil {
@@ -400,20 +400,20 @@ func (g *Generator) generateSingleQueryFile(data *genInfo) (err error) {
 	}
 
 	if g.judgeMode(WithQueryInterface) {
-		err = render(tmpl.TableQueryIface, &buf, data)
+		err = render(template2.TableQueryIface, &buf, data)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, method := range data.Interfaces {
-		err = render(tmpl.DIYMethod, &buf, method)
+		err = render(template2.DIYMethod, &buf, method)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = render(tmpl.CRUDMethod, &buf, data.QueryStructMeta)
+	err = render(template2.CRUDMethod, &buf, data.QueryStructMeta)
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func (g *Generator) generateQueryUnitTestFile(data *genInfo) (err error) {
 	if structPkgPath == "" {
 		structPkgPath = g.modelPkgPath
 	}
-	err = render(tmpl.Header, &buf, map[string]interface{}{
+	err = render(template2.Header, &buf, map[string]interface{}{
 		"Package":        g.queryPkgName,
 		"ImportPkgPaths": unitTestImportList.Add(structPkgPath).Add(data.ImportPkgPaths...).Paths(),
 	})
@@ -438,13 +438,13 @@ func (g *Generator) generateQueryUnitTestFile(data *genInfo) (err error) {
 		return err
 	}
 
-	err = render(tmpl.CRUDMethodTest, &buf, data.QueryStructMeta)
+	err = render(template2.CRUDMethodTest, &buf, data.QueryStructMeta)
 	if err != nil {
 		return err
 	}
 
 	for _, method := range data.Interfaces {
-		err = render(tmpl.DIYMethodTest, &buf, method)
+		err = render(template2.DIYMethodTest, &buf, method)
 		if err != nil {
 			return err
 		}
@@ -476,18 +476,18 @@ func (g *Generator) generateModelFile() error {
 			continue
 		}
 		pool.Wait()
-		go func(data *generate.QueryStructMeta) {
+		go func(data *generate2.QueryStructMeta) {
 			defer pool.Done()
 
 			var buf bytes.Buffer
-			err := render(tmpl.Model, &buf, data)
+			err := render(template2.Model, &buf, data)
 			if err != nil {
 				errChan <- err
 				return
 			}
 
 			for _, method := range data.ModelMethods {
-				err = render(tmpl.ModelMethod, &buf, method)
+				err = render(template2.ModelMethod, &buf, method)
 				if err != nil {
 					errChan <- err
 					return
@@ -563,7 +563,7 @@ func (g *Generator) output(fileName string, content []byte) error {
 	return ioutil.WriteFile(fileName, result, 0640)
 }
 
-func (g *Generator) pushQueryStructMeta(meta *generate.QueryStructMeta) (*genInfo, error) {
+func (g *Generator) pushQueryStructMeta(meta *generate2.QueryStructMeta) (*genInfo, error) {
 	structName := meta.ModelStructName
 	if g.Data[structName] == nil {
 		g.Data[structName] = &genInfo{QueryStructMeta: meta}
