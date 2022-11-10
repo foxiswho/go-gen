@@ -9,10 +9,11 @@ import (
 
 // Config model configuration
 type Config struct {
-	ModelPkg    string
-	TablePrefix string
-	TableName   string
-	ModelName   string
+	ModelPkg     string
+	TablePrefix  string
+	TableName    string
+	TableComment string
+	ModelName    string
 
 	ImportPkgPaths []string
 	ModelOpts      []Option

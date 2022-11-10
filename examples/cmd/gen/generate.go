@@ -14,7 +14,7 @@ func init() {
 
 func main() {
 	g := gen.NewGenerator(gen.Config{
-		OutPath: "../../dal/query",
+		OutPath: "dal/query",
 	})
 
 	g.UseDB(dal.DB)
@@ -22,5 +22,5 @@ func main() {
 	// generate all table from database
 	g.ApplyBasic(g.GenerateAllTable()...)
 
-	g.Execute()
+	g.ExecuteModel()
 }

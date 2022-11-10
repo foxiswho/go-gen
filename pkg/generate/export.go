@@ -42,6 +42,7 @@ func GetQueryStructMeta(db *gorm.DB, conf *model2.Config) (*QueryStructMeta, err
 		Generated:       true,
 		FileName:        fileName,
 		TableName:       tableName,
+		TableComment:    conf.TableComment,
 		ModelStructName: structName,
 		QueryStructName: uncaptialize(structName),
 		S:               strings.ToLower(structName[0:1]),

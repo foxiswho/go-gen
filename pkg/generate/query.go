@@ -32,6 +32,7 @@ type QueryStructMeta struct {
 	QueryStructName string // internal query struct name
 	ModelStructName string // origin/model struct name
 	TableName       string // table name in db server
+	TableComment    string
 	StructInfo      parser.Param
 	Fields          []*model.Field
 	Source          model.SourceCode

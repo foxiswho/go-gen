@@ -102,9 +102,19 @@ func (g *Generator) GenerateModel(tableName string, opts ...ModelOpt) *generate2
 	return g.GenerateModelAs(tableName, g.db.Config.NamingStrategy.SchemaName(tableName), opts...)
 }
 
+// GenerateModel catch table info from db, return a BaseStruct
+func (g *Generator) GenerateModelTable(tableName string, tableComment string, opts ...ModelOpt) *generate2.QueryStructMeta {
+	return g.GenerateModelTableAs(tableName, tableComment, g.db.Config.NamingStrategy.SchemaName(tableName), opts...)
+}
+
 // GenerateModelAs catch table info from db, return a BaseStruct
 func (g *Generator) GenerateModelAs(tableName string, modelName string, opts ...ModelOpt) *generate2.QueryStructMeta {
-	meta, err := generate2.GetQueryStructMeta(g.db, g.genModelConfig(tableName, modelName, opts))
+	return g.GenerateModelTableAs(tableName, "", modelName, opts...)
+}
+
+// GenerateModelAs catch table info from db, return a BaseStruct
+func (g *Generator) GenerateModelTableAs(tableName string, tableComment string, modelName string, opts ...ModelOpt) *generate2.QueryStructMeta {
+	meta, err := generate2.GetQueryStructMeta(g.db, g.genModelConfigTable(tableName, tableComment, modelName, opts))
 	if err != nil {
 		g.db.Logger.Error(context.Background(), "generate struct from table fail: %s", err)
 		panic("generate struct fail")
@@ -121,7 +131,8 @@ func (g *Generator) GenerateModelAs(tableName string, modelName string, opts ...
 
 // GenerateAllTable generate all tables in db
 func (g *Generator) GenerateAllTable(opts ...ModelOpt) (tableModels []interface{}) {
-	tableList, err := g.db.Migrator().GetTables()
+	//tableList, err := g.db.Migrator().GetTables()
+	tableList, err := g.GetTablesAll()
 	if err != nil {
 		panic(fmt.Errorf("get all tables fail: %w", err))
 	}
@@ -129,8 +140,8 @@ func (g *Generator) GenerateAllTable(opts ...ModelOpt) (tableModels []interface{
 	g.info(fmt.Sprintf("find %d table from db: %s", len(tableList), tableList))
 
 	tableModels = make([]interface{}, len(tableList))
-	for i, tableName := range tableList {
-		tableModels[i] = g.GenerateModel(tableName, opts...)
+	for i, table := range tableList {
+		tableModels[i] = g.GenerateModelTable(table.TableName, table.TableComment, opts...)
 	}
 	return tableModels
 }
@@ -148,6 +159,10 @@ func (g *Generator) GenerateModelFrom(obj helper.Object) *generate2.QueryStructM
 }
 
 func (g *Generator) genModelConfig(tableName string, modelName string, modelOpts []ModelOpt) *model2.Config {
+	return g.genModelConfigTable(tableName, "", modelName, modelOpts)
+}
+
+func (g *Generator) genModelConfigTable(tableName string, tableComment string, modelName string, modelOpts []ModelOpt) *model2.Config {
 	if modelOpts == nil {
 		modelOpts = g.modelOpts
 	} else {
@@ -157,6 +172,7 @@ func (g *Generator) genModelConfig(tableName string, modelName string, modelOpts
 		ModelPkg:       g.Config.ModelPkgPath,
 		TablePrefix:    g.getTablePrefix(),
 		TableName:      tableName,
+		TableComment:   tableComment,
 		ModelName:      modelName,
 		ImportPkgPaths: g.importPkgPaths,
 		ModelOpts:      modelOpts,
@@ -627,4 +643,14 @@ func getImportPkgPaths(data *genInfo) []string {
 		importPkgPaths = append(importPkgPaths, importPath)
 	}
 	return importPkgPaths
+}
+
+func (g *Generator) GetTablesAll() (tableList []*TableField, err error) {
+	err = g.db.Raw("SELECT TABLE_NAME,TABLE_COMMENT FROM information_schema.tables where TABLE_SCHEMA=?", g.db.Migrator().CurrentDatabase()).Scan(&tableList).Error
+	return
+}
+
+type TableField struct {
+	TableName    string `gorm:"column:TABLE_NAME"`
+	TableComment string `gorm:"column:TABLE_COMMENT"`
 }
