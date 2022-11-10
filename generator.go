@@ -487,6 +487,11 @@ func (g *Generator) generateModelFile() error {
 
 	errChan := make(chan error)
 	pool := pools.NewPool(concurrent)
+
+	tpl := g.TemplateModelMethod
+	if "" == tpl {
+		tpl = template2.ModelMethod
+	}
 	for _, data := range g.models {
 		if data == nil || !data.Generated {
 			continue
@@ -503,14 +508,20 @@ func (g *Generator) generateModelFile() error {
 			}
 
 			for _, method := range data.ModelMethods {
-				err = render(template2.ModelMethod, &buf, method)
+				err = render(tpl, &buf, method)
 				if err != nil {
 					errChan <- err
 					return
 				}
 			}
 
-			modelFile := modelOutPath + data.FileName + ".gen.go"
+			modelFile := modelOutPath + data.FileName + g.FilenameExtension
+			if "FileName" == g.PackageFileName {
+				modelFile += data.FileName
+			} else {
+				modelFile += data.ModelStructName
+			}
+			modelFile += g.FilenameExtension
 			err = g.output(modelFile, buf.Bytes())
 			if err != nil {
 				errChan <- err

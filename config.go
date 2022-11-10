@@ -57,6 +57,10 @@ type Config struct {
 	fieldNewTagNS  func(columnName string) (tagContent string)
 
 	modelOpts []ModelOpt
+
+	FilenameExtension   string //文件扩展名
+	PackageFileName     string //包名称 FileName ModelStructName
+	TemplateModelMethod string //模版数据
 }
 
 // WithOpts set global  model options
@@ -141,6 +145,13 @@ func (cfg *Config) Revise() (err error) {
 
 	if cfg.db == nil {
 		cfg.db, _ = gorm.Open(tests.DummyDialector{})
+	}
+	if cfg.FilenameExtension == "" {
+		cfg.FilenameExtension = ".gen.go"
+	}
+	if cfg.PackageFileName == "" {
+		cfg.PackageFileName = "FileName"
+		//cfg.PackageFileName = "ModelStructName"
 	}
 
 	return nil
