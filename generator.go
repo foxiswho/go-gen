@@ -504,9 +504,13 @@ func (g *Generator) generateModelFile() error {
 	errChan := make(chan error)
 	pool := pools.NewPool(concurrent)
 
-	tpl := g.TemplateModelMethod
+	tpl := g.TemplateModel
 	if "" == tpl {
 		tpl = template2.Model
+	}
+	tplMethod := g.TemplateModelMethod
+	if "" == tplMethod {
+		tplMethod = template2.ModelMethod
 	}
 	for _, data := range g.models {
 		if data == nil || !data.Generated {
@@ -524,7 +528,7 @@ func (g *Generator) generateModelFile() error {
 			}
 
 			for _, method := range data.ModelMethods {
-				err = render(template2.ModelMethod, &buf, method)
+				err = render(tplMethod, &buf, method)
 				if err != nil {
 					errChan <- err
 					return

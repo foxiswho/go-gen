@@ -60,6 +60,7 @@ type Config struct {
 
 	FilenameExtension   string //文件扩展名
 	PackageFileName     string //包名称 FileName ModelStructName
+	TemplateModel       string //模版数据
 	TemplateModelMethod string //模版数据
 }
 
