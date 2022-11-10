@@ -268,6 +268,22 @@ func (g *Generator) Execute() {
 	g.info("Generate code done.")
 }
 
+// Execute generate code to output path
+func (g *Generator) ExecuteModel() {
+	g.info("Start generating code.")
+
+	if err := g.generateModelFile(); err != nil {
+		g.db.Logger.Error(context.Background(), "generate model struct fail: %s", err)
+		panic("generate model struct fail")
+	}
+	//if err := g.generateQueryFile(); err != nil {
+	//	g.db.Logger.Error(context.Background(), "generate query code fail: %s", err)
+	//	panic("generate query code fail")
+	//}
+
+	g.info("Generate code done.")
+}
+
 // info logger
 func (g *Generator) info(logInfos ...string) {
 	for _, l := range logInfos {
