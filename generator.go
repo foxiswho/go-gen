@@ -515,7 +515,7 @@ func (g *Generator) generateModelFile() error {
 				}
 			}
 
-			modelFile := modelOutPath + data.FileName + g.FilenameExtension
+			modelFile := modelOutPath
 			if "FileName" == g.PackageFileName {
 				modelFile += data.FileName
 			} else {
