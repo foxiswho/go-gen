@@ -506,7 +506,7 @@ func (g *Generator) generateModelFile() error {
 
 	tpl := g.TemplateModelMethod
 	if "" == tpl {
-		tpl = template2.ModelMethod
+		tpl = template2.Model
 	}
 	for _, data := range g.models {
 		if data == nil || !data.Generated {
@@ -517,14 +517,14 @@ func (g *Generator) generateModelFile() error {
 			defer pool.Done()
 
 			var buf bytes.Buffer
-			err := render(template2.Model, &buf, data)
+			err := render(tpl, &buf, data)
 			if err != nil {
 				errChan <- err
 				return
 			}
 
 			for _, method := range data.ModelMethods {
-				err = render(tpl, &buf, method)
+				err = render(template2.ModelMethod, &buf, method)
 				if err != nil {
 					errChan <- err
 					return
